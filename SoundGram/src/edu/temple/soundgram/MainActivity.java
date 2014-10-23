@@ -1,7 +1,12 @@
 package edu.temple.soundgram;
 
+import java.io.BufferedInputStream;
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.net.URL;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -22,8 +27,10 @@ import android.net.Uri;
 import android.os.Bundle;
 import android.os.Environment;
 import android.os.Handler;
+import android.os.Looper;
 import android.os.Message;
 import android.provider.MediaStore;
+import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
@@ -246,9 +253,39 @@ public class MainActivity extends Activity {
 			public void onClick(View v) {
 				MediaPlayer mPlayer = new MediaPlayer();
 		        try {
-		            mPlayer.setDataSource(soundgramObject.getString("audio_url"));
-		            mPlayer.prepare();
-		            mPlayer.start();
+		        	
+		        	//Get the name of file and store on cache 
+		        	String url = soundgramObject.getString("audio_url");
+		        	String fileName = url.substring( url.lastIndexOf('=')+1, url.length());
+		        	
+		        	//Checks if file is stored on cache
+		        	
+		        
+		        	    File basePath = new File(android.os.Environment.getExternalStorageDirectory(),"SoundGram/cache");
+		        	    
+		        	
+		        	    Log.e("FileName", basePath.toString());
+		        	    File fullPath = new File(basePath, fileName);
+		        	    	
+		        	    Log.e("FileName", fullPath.toString());
+		        	    
+		        	    
+		        	  
+		        	    if (fullPath.exists()){
+		        	    	
+		        	    	// Play file from cache               	    
+					        mPlayer.setDataSource(fullPath.toString());
+					        mPlayer.prepare();
+					        mPlayer.start();
+					      
+		        	    	
+		        	    }else{		        	    		        	    	
+		        	
+		        	    	saveFileCache(url, fileName);		        	    	
+		        	    	
+		        	    }	        	      
+		        	
+		            
 				} catch (Exception e) {
 					e.printStackTrace();
 				}
@@ -256,7 +293,6 @@ public class MainActivity extends Activity {
 		});
 		
 		soundgramLayout.addView(soundgramImageView);
-		
 		return soundgramLayout;
 	}
 	
@@ -264,11 +300,101 @@ public class MainActivity extends Activity {
 	public void onDestroy(){
 		super.onDestroy();
 		unregisterReceiver(refreshReceiver);
-	}
+	}	
 	
+	
+	
+public void saveFileCache(final String urlFile, final String fileName) throws IOException, InterruptedException{
+		
+	Log.e("Message", "Saving file");
+	
+	Thread t = new Thread() {
+
+		
+	 public void run() {
+	 Looper.prepare(); //Prepares message pool for child thread
+		
+		try{
+
+			final File cacheDir = new File(android.os.Environment.getExternalStorageDirectory(),"SoundGram/cache");
+			String Full_URL = cacheDir.toString()+"/"+fileName;
+			Log.e("Full URL", Full_URL);
+			
+			if(!cacheDir.exists())
+			   cacheDir.mkdirs();
+
+		
+	            	File f=new File(cacheDir,fileName);
+					URL url = new URL(urlFile); 
+		
+					            InputStream input = new BufferedInputStream(url.openStream());
+					            OutputStream output = new FileOutputStream(f);
+		
+					            byte data[] = new byte[1024];
+					            long total = 0;
+					            int count=0;
+					            while ((count = input.read(data)) != -1) {
+					                total++;
+					                output.write(data, 0, count);
+					            }
+		
+					            output.flush();
+					            output.close();
+					            input.close();
+					            
+					          Message msg = Message.obtain();
+					  		  msg.obj = Full_URL;
+
+					  		 playSound.sendMessage(msg);
+					            
+					}
+					catch(Exception e){
+						
+						e.printStackTrace();
+						
+					}
+		
+			Looper.loop(); //Loop the message queue
+	           }
+	
+		};
+	
+	  t.start();
+	 
+  	
+		  
+} 
+	
+	
+    //Execute file when thread is finished 
+Handler playSound = new Handler(new Handler.Callback() {
+	
+	public boolean handleMessage(Message msg) {
+		
+		
+		Log.e("Hanle section",msg.obj.toString());
+		
+		MediaPlayer mPlayer = new MediaPlayer();
+        try {
+			mPlayer.setDataSource(msg.obj.toString());
+			mPlayer.prepare();
+			mPlayer.start();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+        return false;
+      
+               
+       
+	}
+});
+
+
+
+
+
 }
-
-
 
 
 
