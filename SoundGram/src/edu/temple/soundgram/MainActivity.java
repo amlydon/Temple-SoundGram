@@ -51,11 +51,7 @@ public class MainActivity extends Activity {
 
         @Override
         public void onReceive(Context context, Intent intent) {
-        	if (intent.getAction().equals(UploadSoundGramService.REFRESH_ACTION)){
-        		try {
-        			loadStream();
-        		} catch (Exception e) {}
-        	}
+			loadStream();
         }
 	};
 	
